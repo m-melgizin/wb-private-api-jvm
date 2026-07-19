@@ -7,7 +7,6 @@ import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
-import java.nio.file.Path
 import java.time.Instant
 import java.util.Locale
 import kotlin.system.exitProcess
@@ -36,7 +35,8 @@ object FetchToken {
 
     const val WB_URL = "https://www.wildberries.ru"
     const val COOKIE_NAME = "x_wbaas_token"
-    const val DEFAULT_OUTPUT = ".wbaas_token"
+    // Рабочая директория Gradle run — token-fetcher/; пишем в корень проекта (на уровень выше).
+    val DEFAULT_OUTPUT: File = File("..", ".wbaas_token").canonicalFile
     const val DEFAULT_TIMEOUT_SECONDS = 30L
 
     /**
@@ -50,7 +50,7 @@ object FetchToken {
      */
     fun fetch(
         headed: Boolean = false,
-        output: File = File(DEFAULT_OUTPUT),
+        output: File = DEFAULT_OUTPUT,
         timeoutSeconds: Long = DEFAULT_TIMEOUT_SECONDS,
         browserType: String = "chromium"
     ): TokenResult? {
@@ -98,11 +98,18 @@ object FetchToken {
                     return null
                 }
 
-                val expiresAt = token.expires?.toLong() ?: (System.currentTimeMillis() + 14L * 24 * 60 * 60 * 1000)
+                val expiresAtSec = token.expires.takeIf { e -> e != null && e > 0.0 }
+                val expiresMs = if (expiresAtSec != null) {
+                    // Playwright cookie.expires — секунды (unix epoch),
+                    // SessionBuilder.readToken() ждёт миллисекунды.
+                    (expiresAtSec * 1000).toLong()
+                } else {
+                    System.currentTimeMillis() + 14L * 24 * 60 * 60 * 1000
+                }
                 val result = TokenResult(
                     token = token.value,
-                    expiresAt = expiresAt,
-                    expiresAtIso = Instant.ofEpochMilli(expiresAt).toString()
+                    expiresAt = expiresMs,
+                    expiresAtIso = Instant.ofEpochMilli(expiresMs).toString()
                 )
                 writeTokenFile(output, result)
                 println("ГОТОВО. Токен сохранён в: ${output.absolutePath}")
@@ -189,7 +196,7 @@ fun main(args: Array<String>) {
     }
     val result = FetchToken.fetch(
         headed = opts.headed,
-        output = File(opts.output),
+        output = opts.output,
         timeoutSeconds = opts.timeoutSeconds,
         browserType = opts.browser
     )
@@ -198,7 +205,7 @@ fun main(args: Array<String>) {
 
 private data class CliOptions(
     val headed: Boolean = false,
-    val output: String = FetchToken.DEFAULT_OUTPUT,
+    val output: File = FetchToken.DEFAULT_OUTPUT,
     val timeoutSeconds: Long = FetchToken.DEFAULT_TIMEOUT_SECONDS,
     val browser: String = "chromium",
     val installOnly: Boolean = false,
@@ -214,7 +221,7 @@ private fun parseArgs(args: Array<String>): CliOptions? {
             "--headless" -> opts = opts.copy(headed = false)
             "--out" -> {
                 if (i + 1 >= args.size) { System.err.println("Ошибка: --out требует аргумент"); return null }
-                opts = opts.copy(output = args[++i])
+                opts = opts.copy(output = File(args[++i]).canonicalFile)
             }
             "--timeout" -> {
                 if (i + 1 >= args.size) { System.err.println("Ошибка: --timeout требует аргумент"); return null }
