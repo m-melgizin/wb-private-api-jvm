@@ -27,7 +27,8 @@ Kotlin/JVM-порт библиотеки [`wb-private-api`](https://github.com/G
 12. [Сравнение с JS-версией](#сравнение-с-js-версией)
 13. [Тесты](#тесты)
 14. [Сборка и запуск](#сборка-и-запуск)
-15. [Известные ограничения](#известные-ограничения)
+15. [Подпроект `token-fetcher` (авто-получение токена)](#подпроект-token-fetcher)
+16. [Известные ограничения](#известные-ограничения)
 
 ---
 
@@ -100,37 +101,41 @@ println("Всего: ${supplierCatalog.totalProducts}")
 ```
 wb-private-api-jvm/
 ├── build.gradle.kts
-├── settings.gradle.kts
+├── settings.gradle.kts                # include(":token-fetcher")
 ├── gradle.properties
 ├── gradle/wrapper/                    # Gradle 9.3.0
 ├── gradlew, gradlew.bat
-└── src/
-    ├── main/kotlin/com/wb/privateapi/
-    │   ├── WbPrivateApi.kt            # Фасад (21 метод API)
-    │   ├── session/
-    │   │   ├── Session.kt             # HTTP-сессия: retry/backoff, query-сборка
-    │   │   ├── SessionBuilder.kt      # Фабрика OkHttp-клиента, токен, deviceID, proxy
-    │   │   └── SessionJson.kt         # JSON-кодек на kotlinx.serialization
-    │   ├── model/
-    │   │   ├── Product.kt             # Товар + suspend-методы (стоки, отзывы, видео…)
-    │   │   ├── Catalog.kt             # Обёртка результатов поиска/каталога
-    │   │   ├── Feedback.kt            # Отзыв + getPhotos(size)
-    │   │   └── Question.kt            # Вопрос
-    │   ├── constant/
-    │   │   ├── Constants.kt           # PRODUCTS_PER_PAGE, USER_AGENT, enum'ы
-    │   │   ├── Urls.kt                # Все URL-шаблоны WB
-    │   │   ├── Warehouse.kt           # 131 склад WB
-    │   │   ├── Destination.kt         # Направления доставки (MOSCOW и др.)
-    │   │   └── HttpStatus.kt          # HTTP-статусы
-    │   ├── util/
-    │   │   ├── UrlFormat.kt           # formatUrl() — аналог string-format
-    │   │   ├── BasketCalculator.kt    # CDN-корзины (изображения + видео)
-    │   │   ├── ImageUrlBuilder.kt     # URL изображений/видео/брендов
-    │   │   ├── QueryIdGenerator.kt    # x-queryid
-    │   │   └── Crc16.kt               # CRC16-ARC (партиции feedbacks)
-    │   └── error/
-    │       └── WbException.kt         # Sealed-иерархия ошибок WB
-    └── test/kotlin/com/wb/privateapi/  # 67 тестов в 11 классах
+├── src/                               # основная библиотека
+│   ├── main/kotlin/com/wb/privateapi/
+│   │   ├── WbPrivateApi.kt            # Фасад (21 метод API)
+│   │   ├── session/
+│   │   │   ├── Session.kt             # HTTP-сессия: retry/backoff, query-сборка
+│   │   │   ├── SessionBuilder.kt      # Фабрика OkHttp-клиента, токен, deviceID, proxy
+│   │   │   └── SessionJson.kt         # JSON-кодек на kotlinx.serialization
+│   │   ├── model/
+│   │   │   ├── Product.kt             # Товар + suspend-методы (стоки, отзывы, видео…)
+│   │   │   ├── Catalog.kt             # Обёртка результатов поиска/каталога
+│   │   │   ├── Feedback.kt            # Отзыв + getPhotos(size)
+│   │   │   └── Question.kt            # Вопрос
+│   │   ├── constant/
+│   │   │   ├── Constants.kt           # PRODUCTS_PER_PAGE, USER_AGENT, enum'ы
+│   │   │   ├── Urls.kt                # Все URL-шаблоны WB
+│   │   │   ├── Warehouse.kt           # 131 склад WB
+│   │   │   ├── Destination.kt         # Направления доставки (MOSCOW и др.)
+│   │   │   └── HttpStatus.kt          # HTTP-статусы
+│   │   ├── util/
+│   │   │   ├── UrlFormat.kt           # formatUrl() — аналог string-format
+│   │   │   ├── BasketCalculator.kt    # CDN-корзины (изображения + видео)
+│   │   │   ├── ImageUrlBuilder.kt     # URL изображений/видео/брендов
+│   │   │   ├── QueryIdGenerator.kt    # x-queryid
+│   │   │   └── Crc16.kt               # CRC16-ARC (партиции feedbacks)
+│   │   └── error/
+│   │       └── WbException.kt         # Sealed-иерархия ошибок WB
+│   └── test/kotlin/com/wb/privateapi/  # 67 тестов в 11 классах
+└── token-fetcher/                     # ОТДЕЛЬНЫЙ подпроект: авто-получение токена
+    ├── build.gradle.kts               # application + Playwright
+    └── src/main/kotlin/com/wb/privateapi/token/
+        └── FetchToken.kt              # CLI: ./gradlew :token-fetcher:run
 ```
 
 ---
@@ -692,6 +697,86 @@ val api = WbPrivateApi(
     wbaasToken = "ваш_токен"
 )
 ```
+
+---
+
+## Подпроект `token-fetcher`
+
+Отдельный Gradle-подпроект для **автоматического** получения `x_wbaas_token`
+из реального браузера через [Playwright for Java](https://playwright.dev/java/).
+Вынесен в подпроект, чтобы основная библиотека оставалась лёгкой (Playwright
+тянет ~150MB бинарников Chromium).
+
+### Почему так
+
+JS-скрипт `scripts/get-wb-token.js` — ручной: открыть DevTools на залогиненном
+`wildberries.ru`, вставить сниппет, скопировать JSON в `.wbaas_token`. Токен
+нельзя получить HTTP-запросом из бэкенда: антибот WB проверяет fingerprint
+браузера и выполняет JS-челлендж. Нужен **реальный браузер** — Playwright
+запускает настоящий Chromium, проходит челлендж, и `context.cookies()` читает
+cookie без ручного копирования.
+
+### Запуск
+
+```bash
+# Headless (по умолчанию — для VPS без рабочего стола)
+./gradlew :token-fetcher:run
+
+# Headed (видимое окно — если антибот подставляет капчу в headless)
+./gradlew :token-fetcher:run --args="--headed"
+
+# Свои путь и таймаут
+./gradlew :token-fetcher:run --args="--out ~/.wbaas_token --timeout 60"
+
+# Предзагрузка браузера (подготовка VPS заранее)
+./gradlew :token-fetcher:run --args="--install"
+
+# Справка
+./gradlew :token-fetcher:run --args="--help"
+```
+
+Первый запуск скачает Chromium (~150MB) в кеш Playwright. Результат пишется
+в `.wbaas_token` (JSON `{token, expires_at}`) — тот же формат, что читает
+`SessionBuilder.readToken()`.
+
+### Аргументы CLI
+
+| Аргумент | По умолчанию | Назначение |
+|----------|-------------|-----------|
+| `--headed` | (headless) | Видимое окно браузера. Полезно, если антибот подставляет капчу — пользователь проходит её вручную, скрипт продолжает ждать cookie |
+| `--out <path>` | `./.wbaas_token` | Путь к файлу токена |
+| `--timeout <sec>` | `30` | Таймаут ожидания cookie после загрузки страницы |
+| `--browser <type>` | `chromium` | `chromium` / `firefox` / `webkit` |
+| `--install` | — | Только предзагрузка браузера (без получения токена) |
+| `-h`, `--help` | — | Справка |
+
+### Алгоритм
+
+1. Запуск Chromium (`--disable-blink-features=AutomationControlled`, UA/viewport/locale как у десктопа).
+2. Открытие `https://www.wildberries.ru`, ожидание `networkidle` (с таймаутом).
+3. Poll `context.cookies()` каждые 500мс до появления `x_wbaas_token` или истечения `--timeout`.
+4. В headed-режиме при капче пользователь проходит её вручную — опрос продолжается весь таймаут.
+5. Запись `{token, expires_at}` (expires из cookie, fallback +14 дней) в `--out`.
+6. Закрытие браузера.
+
+### Риски и нюансы
+
+- **Антибот может блокировать headless.** Если за `--timeout` cookie не появилась —
+  попробуйте `--headed` (на машине с рабочим столом) и пройдите капчу. Токен
+  действителен ~14 дней, его можно получить локально и скопировать на VPS.
+- **Playwright на VPS** требует системных зависимостей (`libnss3`, `libatk1.0`,
+  и т.п.). Для headless Linux обычно достаточно `apt install` пакета из
+  [официального списка](https://playwright.dev/java/docs/browsers#install-system-dependencies).
+- **Токен ~14 дней.** Refresh по расписанию не реализован (по запросу —
+  ответственность пользователя). Перезапустите `:token-fetcher:run` при истечении.
+- **Stealth.** Ванильный Playwright в большинстве случаев проходит челлендж WB.
+  При агрессивном детекте можно добавить `playwright-extra`+`stealth` (TODO).
+
+### Использование в коде
+
+`token-fetcher` — отдельный CLI, **не зависит** от основной библиотеки и не
+тянет её в runtime. Основная либа читает результат через `SessionBuilder.readToken()`
+из `.wbaas_token` — никаких изменений в API не требуется.
 
 ---
 

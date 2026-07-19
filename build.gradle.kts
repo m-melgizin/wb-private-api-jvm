@@ -14,6 +14,19 @@ repositories {
 val okHttpVersion = "4.12.0"
 val coroutinesVersion = "1.7.3"
 
+// Общие настройки для всех подпроектов (версия Kotlin, репозитории, toolchain).
+subprojects {
+    repositories {
+        mavenCentral()
+    }
+
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        kotlin {
+            jvmToolchain(21)
+        }
+    }
+}
+
 dependencies {
     // OkHttp client
     implementation("com.squareup.okhttp3:okhttp:$okHttpVersion")
