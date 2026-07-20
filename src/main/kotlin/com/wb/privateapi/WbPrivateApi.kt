@@ -49,6 +49,14 @@ class WbPrivateApi(
     fun session(): Session = session
 
     /**
+     * Выбор external/internal URL для эндпойнта.
+     * JS использует _internal-версию напрямую (без proxy-переписывания),
+     * когда токен есть, и external — когда его нет.
+     */
+    private fun searchUrl(external: String, internal: String): String =
+        if (session.hasToken()) internal else external
+
+    /**
      * Устанавливает токен `x_wbaas_token` (Cookie) для доступа к `__internal`.
      * Повтор `setToken` из JS.
      *
@@ -142,7 +150,7 @@ class WbPrivateApi(
         if (limit != 100) params["limit"] = limit
 
         val res = session.get(
-            Urls.Search.EXACTMATCH,
+            searchUrl(Urls.Search.EXACTMATCH, Urls.Search.EXACTMATCH_INTERNAL),
             params = params,
             headers = mapOf("x-queryid" to QueryIdGenerator.getQueryIdForSearch()),
             retryOptions = RetryOptions(retries = retries)
@@ -173,7 +181,7 @@ class WbPrivateApi(
     /** Общее число товаров по ключевому слову. Повтор `searchTotalProducts` из JS. */
     suspend fun searchTotalProducts(keyword: String): Int {
         val res = session.get(
-            Urls.Search.EXACTMATCH,
+            searchUrl(Urls.Search.EXACTMATCH, Urls.Search.EXACTMATCH_INTERNAL),
             params = mapOf(
                 "appType" to AppType.DESKTOP.value,
                 "curr" to Currency.RUB.value,
@@ -265,7 +273,7 @@ class WbPrivateApi(
      */
     suspend fun searchCustomFilters(keyword: String, filters: List<String>): Map<String, Any?> {
         val res = session.get(
-            Urls.Search.EXACTMATCH,
+            searchUrl(Urls.Search.EXACTMATCH, Urls.Search.EXACTMATCH_INTERNAL),
             params = mapOf(
                 "appType" to AppType.DESKTOP.value,
                 "curr" to Currency.RUB.value,
@@ -317,7 +325,7 @@ class WbPrivateApi(
             URLEncoder.encode(catalogConfig.keyword.lowercase(), Charsets.UTF_8)
 
         val res = session.get(
-            Urls.Search.EXACTMATCH,
+            searchUrl(Urls.Search.EXACTMATCH, Urls.Search.EXACTMATCH_INTERNAL),
             params = params,
             headers = mapOf(
                 "x-queryid" to QueryIdGenerator.getQueryIdForSearch(),

@@ -69,7 +69,7 @@ class Session internal constructor(
         responseType: ResponseType = ResponseType.AUTO
     ): ResponseData = withContext(Dispatchers.IO) {
         val resolved = resolveUrl(url)
-        val isInternal = resolved != url
+        val isInternal = resolved != url || url.contains("__internal")
         val fullUrl = appendQuery(resolved, params)
 
         config.requestLogger?.log(RequestLogEvent("GET", fullUrl))

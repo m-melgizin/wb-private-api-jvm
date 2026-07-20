@@ -98,7 +98,9 @@ class SessionBuilder private constructor(
             val token = wbaasToken ?: readToken()
             val headers = Headers.Builder()
                 .set("User-Agent", userAgent)
-                .set("Accept-Encoding", "gzip, deflate, br")
+                // Accept-Encoding НЕ устанавливаем вручную — OkHttp сделает это сам
+                // и автоматически декодирует gzip/deflate. Ручная установка отключает
+                // авто-декодирование, ломая парсинг JSON-ответов WB.
                 .set("Accept", "application/json, text/plain, */*")
                 .set("Accept-Language", "en-US,en;q=0.9,ru;q=0.8")
                 .set("Origin", "https://www.wildberries.ru")
