@@ -60,8 +60,14 @@ class Product private constructor(
         private set
 
     val id: Long by lazy { (raw["id"] as? Number)?.toLong() ?: (rawCard["nm"] as? Number)?.toLong() ?: 0L }
-    val name: String? get() = raw["name"] as? String
-    val brand: String? get() = (raw["brand"] as? String) ?: (rawSellers["brand"] as? String)
+    val name: String?
+        get() = (raw["name"] as? String)
+            ?: (rawDetails["name"] as? String)
+            ?: (rawCard["name"] as? String)
+    val brand: String?
+        get() = (raw["brand"] as? String)
+            ?: (rawDetails["brand"] as? String)
+            ?: (rawSellers["brand"] as? String)
     val salePriceU: Long? get() = (raw["salePriceU"] as? Number)?.toLong()
     val priceU: Long? get() = (raw["priceU"] as? Number)?.toLong()
     val imtId: Long?
