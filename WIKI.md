@@ -4,10 +4,13 @@ Kotlin/JVM-порт библиотеки [`wb-private-api`](https://github.com/G
 (обёртка над приватным API Wildberries). Полный перенос JS-версии на Kotlin
 с корутинами, OkHttp и kotlinx.serialization.
 
-- **Статус:** реализованы все этапы плана (3–8). Этапы 1 (Gradle-scaffold) и 2
+- **Статус:** все 8 этапов плана выполнены. Этапы 1 (Gradle-scaffold) и 2
   (Constants) существовали до начала портирования.
 - **Сборка:** `./gradlew clean build` — успешно, 0 предупреждений, 0 ошибок.
-- **Тесты:** 67 кейсов в 11 классах, все проходят. Независимая верификация — **PASS**.
+- **Тесты:** **113 кейсов** (67 unit + 46 integration), все проходят.
+  Независимая верификация — **PASS**.
+- **Дополнительно:** подпроект `token-fetcher` для автоматического получения
+  `x_wbaas_token` через Playwright (Chromium headless).
 
 ---
 
@@ -25,10 +28,11 @@ Kotlin/JVM-порт библиотеки [`wb-private-api`](https://github.com/G
 10. [Константы](#константы)
 11. [Обработка ошибок](#обработка-ошибок)
 12. [Сравнение с JS-версией](#сравнение-с-js-версией)
-13. [Тесты](#тесты)
-14. [Сборка и запуск](#сборка-и-запуск)
-15. [Подпроект `token-fetcher` (авто-получение токена)](#подпроект-token-fetcher)
-16. [Известные ограничения](#известные-ограничения)
+13. [Unit-тесты](#unit-тесты)
+14. [Интеграционные тесты](#интеграционные-тесты)
+15. [Сборка и запуск](#сборка-и-запуск)
+16. [Подпроект `token-fetcher` (авто-получение токена)](#подпроект-token-fetcher)
+17. [Известные ограничения](#известные-ограничения)
 
 ---
 
@@ -622,11 +626,11 @@ JVM-тесты **не требуют сети и токена** — все че�
 
 ---
 
-## Тесты
+## Unit-тесты
 
 ```bash
 # Все unit-тесты (без сети, без токена)
-./gradlew test
+./gradlew test --tests "*Test"
 
 # Конкретный класс
 ./gradlew test --tests "com.wb.privateapi.util.Crc16Test"
@@ -638,7 +642,7 @@ JVM-тесты **не требуют сети и токена** — все че�
 ./gradlew test jacocoTestReport
 ```
 
-### Классы тестов (67 кейсов)
+### Классы unit-тестов (67 кейсов)
 
 | Класс | Кейсов | Покрытие |
 |-------|--------|----------|
@@ -654,8 +658,35 @@ JVM-тесты **не требуют сети и токена** — все че�
 | `FeedbackTest` | 4 | getPhotos(min/c516x516), typed accessors, operator get |
 | `WbExceptionTest` | 4 | byStatus mapping, sealed `when`, статус 429 |
 
-Все кейсы — unit (без сети). Интеграционные тесты против живого WB API в
-JVM-версии не перенесены (см. [Ограничения](#известные-ограничения)).
+Все кейсы — unit (без сети, MockWebServer для HTTP).
+
+---
+
+## Интеграционные тесты
+
+Портированы все 4 JS интеграционных тест-сьюта из оригинального проекта.
+Требуют `.wbaas_token` в корне проекта (см. [token-fetcher](#подпроект-token-fetcher)).
+При отсутствии токена тесты корректно пропускаются (без падений).
+
+```bash
+# Все интеграционные тесты
+./gradlew test --tests "*Integration*"
+
+# Все тесты (unit + integration)
+./gradlew build
+```
+
+### Классы интеграционных тестов (46 кейсов)
+
+| Класс | Кейсов | Что тестирует | JS-оригинал |
+|-------|--------|---------------|-------------|
+| `WbPrivateApiIntegrationTest` | 17 | search, filters, supplier, metadata, keyHint, similarByNm, getListOfProducts | `WBPrivateAPI.test.js` |
+| `WbProductIntegrationTest` | 4 | Product.create, getFeedbacks, getQuestionsCount, getQuestions | `WBProduct.test.js` |
+| `WbCatalogIntegrationTest` | 3 | page(), getPosition(), non-existent SKU | `WBCatalog.test.js` |
+| `ConstantsUrlsIntegrationTest` | 17 | домены (*.wb.ru, wildberries.ru, wbbasket.ru…), версии API (v18, v8, v4…), константы, URL-паттерны | `Constants.URLs.integration.test.js` |
+| `WbProductStocksIntegrationTest` | 3 | getStocks для найденного товара, множественные товары, несуществующий товар | `WBProduct.getStocks.test.js` |
+
+**Итого: 113 тестов** (67 unit + 46 integration) — все проходят, `./gradlew clean build` — BUILD SUCCESSFUL.
 
 ---
 
@@ -792,10 +823,10 @@ cookie без ручного копирования.
    JS `string-format` подставил бы 11-й аргумент. **Недостижимо** в текущих
    шаблонах WB (максимум `{4}`). Фикс — тривиален при появлении таких шаблонов.
 
-3. **Интеграционные тесты не перенесены.** JS-проект имеет 6 интеграционных
-   тест-файлов (`*.test.js`, требуют `.wbaas_token` + сеть). JVM-версия
-   покрывает всю логику unit-тестами через MockWebServer. TODO при необходимости:
-   порт на Kotest/JUnit5 с условным пропуском при отсутствии токена.
+3. ~~**Интеграционные тесты не перенесены.**~~ ✅ **Перенесены.** Все 4 JS
+   интеграционных тест-сьюта портированы в 5 JVM-классов (46 кейсов).
+   Запускаются через `./gradlew test --tests "*Integration*"`.
+   При отсутствии `.wbaas_token` корректно пропускаются.
 
 4. **URL-кодирование пробелов/кириллицы на транспортном уровне.** `appendQuery`
    эмитит сырые символы (как JS `qs encode:false`), но OkHttp-транспорт
@@ -811,8 +842,17 @@ cookie без ручного копирования.
 
 ## Вердикт верификации
 
-Независимый verification-агент проверил: сборка, 67 тестов, алгоритмическая
-точность (CRC16, basket, imageURL, qs), покрытие API-методами, поведение сессии.
+Независимый verification-агент (этап initial port) проверил: сборка, 67 тестов,
+алгоритмическая точность (CRC16, basket, imageURL, qs), покрытие API-методами,
+поведение сессии.
 
 **VERDICT: PASS** — все проверки пройдены, единственное наблюдение
 (`{10}`-плейсхолдер) недостижимо в текущих шаблонах WB.
+
+После верификации дополнительно:
+- Добавлен подпроект `token-fetcher` (авто-получение токена через Playwright)
+- Исправлены 3 бага live-запроса (gzip декодинг, `isInternal` для `__internal` URL,
+  селектор `EXACTMATCH_INTERNAL`/`EXACTMATCH`)
+- Портированы все JS интеграционные тесты (46 кейсов, live WB API)
+- **Итог: 113 тестов (67 unit + 46 integration), BUILD SUCCESSFUL, 0 предупреждений**
+- Создан `README.md` + обновлён `WIKI.md`
