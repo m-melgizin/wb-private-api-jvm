@@ -117,7 +117,7 @@ token-fetcher/                 # Отдельный подпроект: авто
 
 ## Связь с JS-проектом
 
-Исходный проект: [Gitlawb/wb-private-api](https://github.com/Gitlawb/wb-private-api)
+Исходный проект: [rrrublev/wb-private-api](https://github.com/rrrublev/wb-private-api)
 
 Порт выполнен методом сравнения (JS-тесты, независимая верификация).
 Все URL-шаблоны байт-идентичны, алгоритмы (CRC16, basket, qs) сверены через `node`.
