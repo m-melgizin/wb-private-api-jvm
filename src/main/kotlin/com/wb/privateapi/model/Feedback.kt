@@ -1,7 +1,9 @@
 package com.wb.privateapi.model
 
 import com.wb.privateapi.constant.Urls
+import com.wb.privateapi.util.FfmpegRemuxer
 import com.wb.privateapi.util.formatUrl
+import java.io.File
 
 /**
  * Отзыв на товар. Перенос `WBFeedback` из `WBFeedback.js`.
@@ -78,6 +80,20 @@ class Feedback(val raw: Map<String, Any?>) {
         if (!v.isReady) return null
         val (shard, uuid) = parseShardedKey(v.id) ?: return null
         return formatUrl(Urls.Feedback.VIDEO_PLAYLIST, shard, uuid)
+    }
+
+    /**
+     * Скачивает видео отзыва и сохраняет его как обычный mp4-файл в
+     * [destination]. CDN отдаёт только HLS — ремукс (без перекодирования)
+     * делает забандленный ffmpeg ([FfmpegRemuxer]), установка ffmpeg в
+     * систему не требуется.
+     *
+     * @return [destination], или `null`, если у отзыва нет готового видео
+     * @throws java.io.IOException при ошибке ремукса
+     */
+    suspend fun downloadVideoMp4(destination: File): File? {
+        val playlistUrl = getVideoUrl() ?: return null
+        return FfmpegRemuxer.remuxToMp4(playlistUrl, destination)
     }
 
     override fun toString(): String =

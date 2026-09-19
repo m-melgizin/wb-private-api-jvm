@@ -13,6 +13,7 @@ repositories {
 
 val okHttpVersion = "4.12.0"
 val coroutinesVersion = "1.7.3"
+val ffmpegVersion = "8.1.2-1.5.14"
 
 // Общие настройки для всех подпроектов (версия Kotlin, репозитории, toolchain).
 subprojects {
@@ -39,6 +40,10 @@ dependencies {
 
     // Logging
     implementation("org.slf4j:slf4j-api:2.0.9")
+
+    // Бандленный ffmpeg (нативные бинарники под все платформы) — для ремукса
+    // HLS-видео отзывов в mp4 без установки ffmpeg в систему пользователя.
+    implementation("org.bytedeco:ffmpeg-platform:$ffmpegVersion")
 
     // Test
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.22")

@@ -132,7 +132,8 @@ wb-private-api-jvm/
 │   │   │   ├── BasketCalculator.kt    # CDN-корзины (изображения + видео)
 │   │   │   ├── ImageUrlBuilder.kt     # URL изображений/видео/брендов
 │   │   │   ├── QueryIdGenerator.kt    # x-queryid
-│   │   │   └── Crc16.kt               # CRC16-ARC (партиции feedbacks)
+│   │   │   ├── Crc16.kt               # CRC16-ARC (партиции feedbacks)
+│   │   │   └── FfmpegRemuxer.kt       # HLS → mp4 через забандленный ffmpeg
 │   │   └── error/
 │   │       └── WbException.kt         # Sealed-иерархия ошибок WB
 │   └── test/kotlin/com/wb/privateapi/  # 67 тестов в 11 классах
@@ -322,6 +323,10 @@ feedback.id             // 42L
 feedback.text           // "отлично"
 feedback.getPhotos()    // List<String> — полные (fs) URL на geobasket.ru, по шарду из key
 feedback.getVideoUrl()  // URL HLS-плейлиста (index.m3u8) или null
+
+// Видео отзыва как обычный mp4-файл (CDN отдаёт только HLS):
+feedback.downloadVideoMp4(File("review-video.mp4")) // suspend, null если видео нет
+
 feedback["customField"] // произвольное поле
 ```
 
@@ -330,6 +335,12 @@ feedback["customField"] // произвольное поле
 > для фото, `mow-videofeedback-{shard}-cdn-{shard}.geobasket.ru` для видео).
 > Старый единый домен `feedbackphotos.wbstatic.net` больше не отвечает.
 > См. [`Urls.Feedback`](src/main/kotlin/com/wb/privateapi/constant/Urls.kt).
+
+> `downloadVideoMp4` ремуксит HLS в mp4 (`-c copy`, без перекодирования)
+> через ffmpeg, забандленный зависимостью `org.bytedeco:ffmpeg-platform`
+> (нативные бинарники под все платформы лежат в jar) — устанавливать
+> ffmpeg в систему не нужно. См.
+> [`FfmpegRemuxer`](src/main/kotlin/com/wb/privateapi/util/FfmpegRemuxer.kt).
 
 ### `Question`
 
