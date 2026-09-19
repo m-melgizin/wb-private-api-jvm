@@ -1,6 +1,7 @@
 package com.wb.privateapi.model
 
 import com.wb.privateapi.constant.Urls
+import com.wb.privateapi.util.formatUrl
 
 /**
  * Отзыв на товар. Перенос `WBFeedback` из `WBFeedback.js`.
@@ -28,22 +29,26 @@ class Feedback(val raw: Map<String, Any?>) {
      * Сырой список фотографий отзыва.
      * Новая структура WB: каждая фото — `{"id": N, "key": "p/uuid",
      * "isBlurred": bool, "isReady": bool}`.
+     *
+     * Названо `rawPhotos`, а не `photos`, чтобы синтезированный JVM-геттер
+     * свойства (`getPhotos()`) не конфликтовал с методом [getPhotos].
      */
     @Suppress("UNCHECKED_CAST")
-    val photos: List<Map<String, Any?>> get() = (raw["photos"] as? List<Map<String, Any?>>) ?: emptyList()
+    val rawPhotos: List<Map<String, Any?>> get() = (raw["photos"] as? List<Map<String, Any?>>) ?: emptyList()
 
     /**
-     * URL фотографий отзыва.
+     * URL фотографий отзыва в полном размере.
      *
-     * Новая структура WB API: фото приходят как `{"key": "p/uuid", ...}`.
-     * Полный URL: `{FEEDBACK_BASE}/{key}`.
-     * Старая структура (`minSizeUri`) больше не поддерживается.
+     * `key` приходит как `"{shard}/{uuid}"` (например, `"5/2e23a361-…"`);
+     * шард зашит в имя CDN-хоста (`mow-feedback-uuid-{shard}-cdn-{shard}.geobasket.ru`).
+     * Старый единый домен `feedbackphotos.wbstatic.net` выведен из эксплуатации.
      *
-     * @return список полных URL фотографий
+     * @return список полных URL фотографий (размер `fs`)
      */
     fun getPhotos(): List<String> {
-        return photos.mapNotNull { it["key"] as? String }
-            .map { p -> Urls.Images.FEEDBACK_BASE + p }
+        return rawPhotos.mapNotNull { it["key"] as? String }
+            .mapNotNull { key -> parseShardedKey(key) }
+            .map { (shard, uuid) -> formatUrl(Urls.Feedback.PHOTO, shard, uuid, "fs") }
     }
 
     /**
@@ -62,19 +67,35 @@ class Feedback(val raw: Map<String, Any?>) {
         }
 
     /**
-     * URL видео отзыва (если есть и готово к показу).
+     * URL HLS-плейлиста видео отзыва (если есть и готово к показу).
+     * Прямого mp4-файла CDN не отдаёт — только `index.m3u8` + `.ts`-чанки
+     * на `mow-videofeedback-{shard}-cdn-{shard}.geobasket.ru`.
      *
-     * Строится по тому же CDN, что и фото: `{FEEDBACK_BASE}/{videoId}`.
-     * @return полный URL видео или `null`
+     * @return URL плейлиста или `null`
      */
     fun getVideoUrl(): String? {
         val v = video ?: return null
         if (!v.isReady) return null
-        return Urls.Images.FEEDBACK_BASE + v.id
+        val (shard, uuid) = parseShardedKey(v.id) ?: return null
+        return formatUrl(Urls.Feedback.VIDEO_PLAYLIST, shard, uuid)
     }
 
     override fun toString(): String =
-        "Feedback(id=$id, valuation=$productValuation, photos=${photos.size}, video=${video != null})"
+        "Feedback(id=$id, valuation=$productValuation, photos=${rawPhotos.size}, video=${video != null})"
+
+    companion object {
+        /**
+         * Разбирает `"{shard}/{uuid}"` в пару (шард, дополненный нулём до 2
+         * цифр; например, `"6"` → `"06"`, `"10"` → `"10"`, `uuid`).
+         */
+        private fun parseShardedKey(key: String): Pair<String, String>? {
+            val slash = key.indexOf('/')
+            if (slash <= 0 || slash == key.length - 1) return null
+            val shard = key.substring(0, slash).toIntOrNull() ?: return null
+            val uuid = key.substring(slash + 1)
+            return shard.toString().padStart(2, '0') to uuid
+        }
+    }
 }
 
 /**

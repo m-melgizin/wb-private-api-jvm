@@ -119,7 +119,7 @@ wb-private-api-jvm/
 │   │   ├── model/
 │   │   │   ├── Product.kt             # Товар + suspend-методы (стоки, отзывы, видео…)
 │   │   │   ├── Catalog.kt             # Обёртка результатов поиска/каталога
-│   │   │   ├── Feedback.kt            # Отзыв + getPhotos(size)
+│   │   │   ├── Feedback.kt            # Отзыв + getPhotos()/getVideoUrl()
 │   │   │   └── Question.kt            # Вопрос
 │   │   ├── constant/
 │   │   │   ├── Constants.kt           # PRODUCTS_PER_PAGE, USER_AGENT, enum'ы
@@ -318,12 +318,18 @@ catalog.getPosition(10L) // 0-based индекс, -1 если не найден
 
 ```kotlin
 val feedback = Feedback(mapOf("id" to 42L, "productValuation" to 5, ...))
-feedback.id                    // 42L
-feedback.text                  // "отлично"
-feedback.getPhotos("min")      // List<String> — полные URL (FEEDBACK_BASE + minSizeUri)
-feedback.getPhotos("c516x516") // крупные фото
-feedback["customField"]        // произвольное поле
+feedback.id             // 42L
+feedback.text           // "отлично"
+feedback.getPhotos()    // List<String> — полные (fs) URL на geobasket.ru, по шарду из key
+feedback.getVideoUrl()  // URL HLS-плейлиста (index.m3u8) или null
+feedback["customField"] // произвольное поле
 ```
+
+> CDN отзывов шардирован: `key`/`video.id` приходят как `"{shard}/{uuid}"`,
+> шард зашит в имя хоста (`mow-feedback-uuid-{shard}-cdn-{shard}.geobasket.ru`
+> для фото, `mow-videofeedback-{shard}-cdn-{shard}.geobasket.ru` для видео).
+> Старый единый домен `feedbackphotos.wbstatic.net` больше не отвечает.
+> См. [`Urls.Feedback`](src/main/kotlin/com/wb/privateapi/constant/Urls.kt).
 
 ### `Question`
 

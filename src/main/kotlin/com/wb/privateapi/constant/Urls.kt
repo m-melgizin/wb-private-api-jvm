@@ -56,11 +56,24 @@ object Urls {
         const val BIG = "https://basket-{0}.wbbasket.ru/vol{1}/part{2}/{3}/images/big/{4}.webp"
         const val SMALL = "https://basket-{0}.wbbasket.ru/vol{1}/part{2}/{3}/images/c246x328/{4}.webp"
         const val MEDIUM = "https://basket-{0}.wbbasket.ru/vol{1}/part{2}/{3}/images/c516x688/{4}.webp"
-        const val FEEDBACK_BASE = "https://feedbackphotos.wbstatic.net/"
     }
 
     object Video {
         const val HLS = "https://videonme-basket-{0}.wbbasket.ru/vol{1}/part{2}/{3}/hls/{4}/index.m3u8"
         const val MP4 = "https://videonme-basket-{0}.wbbasket.ru/vol{1}/part{2}/{3}/mp4/{4}/1.mp4"
+    }
+
+    /**
+     * CDN отзывов (фото и видео). Домен `feedbackphotos.wbstatic.net` выведен
+     * из эксплуатации; актуальный CDN — `geobasket.ru`, шардированный по
+     * номеру, зашитому в поле `key`/`video.id` (`"{shard}/{uuid}"`).
+     *
+     * `{0}` — номер шарда (2 цифры, `05`, `10`, …), `{1}` — uuid файла,
+     * `{2}` — размер фото (`ms` — миниатюра, `fs` — полный размер).
+     */
+    object Feedback {
+        const val PHOTO = "https://mow-feedback-uuid-{0}-cdn-{0}.geobasket.ru/{1}/{2}.webp"
+        const val VIDEO_PREVIEW = "https://mow-videofeedback-{0}-cdn-{0}.geobasket.ru/{1}/preview.webp"
+        const val VIDEO_PLAYLIST = "https://mow-videofeedback-{0}-cdn-{0}.geobasket.ru/{1}/index.m3u8"
     }
 }

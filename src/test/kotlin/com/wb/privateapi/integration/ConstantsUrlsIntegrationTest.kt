@@ -92,9 +92,9 @@ class ConstantsUrlsIntegrationTest {
     }
 
     @Test
-    fun `domain wbstatic net`() {
-        listOf(Urls.Images.FEEDBACK_BASE)
-            .forEach { Assertions.assertTrue(it.contains("wbstatic.net"), "$it без wbstatic.net") }
+    fun `domain geobasket ru`() {
+        listOf(Urls.Feedback.PHOTO, Urls.Feedback.VIDEO_PREVIEW, Urls.Feedback.VIDEO_PLAYLIST)
+            .forEach { Assertions.assertTrue(it.contains("geobasket.ru"), "$it без geobasket.ru") }
     }
 
     @Test

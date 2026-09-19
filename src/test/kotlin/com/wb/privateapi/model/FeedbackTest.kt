@@ -1,6 +1,5 @@
 package com.wb.privateapi.model
 
-import com.wb.privateapi.constant.Urls
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -10,7 +9,7 @@ import org.junit.jupiter.api.Test
 class FeedbackTest {
 
     @Test
-    fun `getPhotos builds full URLs from new key format`() {
+    fun `getPhotos builds sharded geobasket URLs from key format`() {
         val feedback = Feedback(
             mapOf(
                 "id" to 123L,
@@ -23,8 +22,10 @@ class FeedbackTest {
         )
         val urls = feedback.getPhotos()
         assertEquals(1, urls.size)
-        assertTrue(urls[0].startsWith(Urls.Images.FEEDBACK_BASE), "url=${urls[0]}")
-        assertTrue(urls[0].endsWith("6/uuid-123"), "url=${urls[0]}")
+        assertEquals(
+            "https://mow-feedback-uuid-06-cdn-06.geobasket.ru/uuid-123/fs.webp",
+            urls[0]
+        )
     }
 
     @Test
@@ -52,7 +53,7 @@ class FeedbackTest {
         )
         val urls = feedback.getPhotos()
         assertEquals(1, urls.size)
-        assertTrue(urls[0].endsWith("7/uuid-456"))
+        assertTrue(urls[0].endsWith("uuid-456/fs.webp"))
     }
 
     @Test
@@ -111,7 +112,7 @@ class FeedbackTest {
     }
 
     @Test
-    fun `getVideoUrl builds full URL`() {
+    fun `getVideoUrl builds sharded HLS playlist URL`() {
         val feedback = Feedback(
             mapOf(
                 "id" to "abc123",
@@ -123,9 +124,10 @@ class FeedbackTest {
             )
         )
         val url = feedback.getVideoUrl()
-        assertNotNull(url)
-        assertTrue(url!!.startsWith(Urls.Images.FEEDBACK_BASE))
-        assertTrue(url.endsWith("8/7ac67184-3cf7-4626-a31c-17b902c7d368"))
+        assertEquals(
+            "https://mow-videofeedback-08-cdn-08.geobasket.ru/7ac67184-3cf7-4626-a31c-17b902c7d368/index.m3u8",
+            url
+        )
     }
 
     @Test
