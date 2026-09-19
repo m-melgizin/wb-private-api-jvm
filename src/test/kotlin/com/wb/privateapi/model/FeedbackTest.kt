@@ -12,7 +12,7 @@ class FeedbackTest {
     fun `getPhotos builds sharded geobasket URLs from key format`() {
         val feedback = Feedback(
             mapOf(
-                "id" to 123L,
+                "id" to "123",
                 "productValuation" to 5,
                 "text" to "ok",
                 "photos" to listOf(
@@ -30,13 +30,13 @@ class FeedbackTest {
 
     @Test
     fun `getPhotos returns empty when no photos`() {
-        val feedback = Feedback(mapOf("id" to 1L))
+        val feedback = Feedback(mapOf("id" to "1"))
         assertTrue(feedback.getPhotos().isEmpty())
     }
 
     @Test
     fun `getPhotos returns empty when photos list is null`() {
-        val feedback = Feedback(mapOf("id" to 1L, "photos" to null))
+        val feedback = Feedback(mapOf("id" to "1", "photos" to null))
         assertTrue(feedback.getPhotos().isEmpty())
     }
 
@@ -44,7 +44,7 @@ class FeedbackTest {
     fun `getPhotos skips photos without key`() {
         val feedback = Feedback(
             mapOf(
-                "id" to 1L,
+                "id" to "1",
                 "photos" to listOf(
                     mapOf("id" to 1, "isBlurred" to false),
                     mapOf("id" to 2, "key" to "7/uuid-456", "isBlurred" to false)
@@ -58,8 +58,8 @@ class FeedbackTest {
 
     @Test
     fun `typed accessors read raw fields`() {
-        val feedback = Feedback(mapOf("id" to 42L, "text" to "good", "productValuation" to 4))
-        assertEquals(42L, feedback.id)
+        val feedback = Feedback(mapOf("id" to "aW31ilTsJvjipGb62YJ0", "text" to "good", "productValuation" to 4))
+        assertEquals("aW31ilTsJvjipGb62YJ0", feedback.id)
         assertEquals("good", feedback.text)
         assertEquals(4, feedback.productValuation)
     }
@@ -72,7 +72,7 @@ class FeedbackTest {
 
     @Test
     fun `video returns null when no video`() {
-        val feedback = Feedback(mapOf("id" to 1L))
+        val feedback = Feedback(mapOf("id" to "1"))
         assertNull(feedback.video)
     }
 
@@ -132,7 +132,7 @@ class FeedbackTest {
 
     @Test
     fun `getVideoUrl returns null when no video`() {
-        val feedback = Feedback(mapOf("id" to 1L))
+        val feedback = Feedback(mapOf("id" to "1"))
         assertNull(feedback.getVideoUrl())
     }
 }

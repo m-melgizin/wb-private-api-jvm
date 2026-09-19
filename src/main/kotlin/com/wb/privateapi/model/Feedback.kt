@@ -18,8 +18,11 @@ class Feedback(val raw: Map<String, Any?>) {
     /** Произвольное поле ответа (аналог прямого доступа к свойству в JS). */
     operator fun get(key: String): Any? = raw[key]
 
-    /** Идентификатор отзыва. */
-    val id: Long? by lazy { (raw["id"] as? Number)?.toLong() }
+    /**
+     * Идентификатор отзыва (например, `"aW31ilTsJvjipGb62YJ0"`).
+     * WB отдаёт его как непрозрачную строку, а не число.
+     */
+    val id: String? get() = raw["id"] as? String
 
     /** Текст отзыва. */
     val text: String? get() = raw["text"] as? String
