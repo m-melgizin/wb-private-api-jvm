@@ -44,6 +44,10 @@ fun main() = runBlocking {
   доставка, промо, информация о поставщиках
 - **Модели** — `Product` (с suspend-методами: стоки, отзывы, вопросы, видео),
   `Catalog` (с page() / getPosition()), `Feedback`, `Question`
+- **Видео отзывов в mp4** — `Feedback.downloadVideoMp4()` ремуксит HLS
+  (`index.m3u8` + `.ts`, единственное, что отдаёт CDN) в обычный mp4 через
+  забандленный ffmpeg (`org.bytedeco:ffmpeg-platform`) — ничего отдельно
+  устанавливать не нужно
 - **HTTP-сессия** — OkHttp, retry с экспоненциальным backoff, proxy-переписывание
   (`*.wb.ru` → `__internal/*`), deviceID, `qs`-стиль query-параметров
 - **Авто-получение токена** — отдельный Gradle-подпроект `token-fetcher` на Playwright
